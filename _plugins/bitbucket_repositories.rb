@@ -4,7 +4,7 @@
 #
 # {% bitbucket_repositories user_name %}
 #
-# If you want to show private repositories you must create a config file at
+# If you want to show provate repositories you must create a config file at
 # the root of your Jekyll site
 #
 # _bitbucket.yml
@@ -46,17 +46,24 @@ module Jekyll
       response = http.request(request)
       
       json = JSON.parse((response.code == '200') ? response.body : {})
+      json['values'].sort!{|a,b| a['name'] <=> b['name']}
             
       output = "<div class='repo_blocks'>"
       json['values'].each do |repo|
         output += "<div class='repo_block'>"
         output +=   "<a class='repo_name' href='#{repo['links']['html']['href']}'>#{repo['name']}</a>"
+        output +=   "<div class='repo_language'>#{prettyLanguageName(repo['language'])}</div>"
         output +=   "<div class='repo_descrition'>#{repo['description']}</div>"
         output += "</div>"
       end
       output += "</div>"
             
       output
+    end
+    
+    def prettyLanguageName(name)
+      l = {'c#' => 'C#', 'objective-c' => 'Objective-C'}
+      name = l.has_key?(name) ? l[name] : name
     end
   end
 end
