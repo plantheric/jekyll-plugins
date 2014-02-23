@@ -49,15 +49,27 @@ module Jekyll
       json['values'].sort!{|a,b| a['name'] <=> b['name']}
             
       output = "<div class='repo_blocks'>"
+
+      # Data retrieved from bitbucket
       json['values'].each do |repo|
-        output += "<div class='repo_block'>"
-        output +=   "<a class='repo_name' href='#{repo['links']['html']['href']}'>#{repo['name']}</a>"
-        output +=   "<div class='repo_language'>#{prettyLanguageName(repo['language'])}</div>"
-        output +=   "<div class='repo_descrition'>#{repo['description']}</div>"
-        output += "</div>"
+        output += genRepoBlock(repo['name'], repo['links']['html']['href'], prettyLanguageName(repo['language']), repo['description'])
       end
+
+      # Data from data folder
+      context.registers[:site].data['bitbucket'].each do |repo|
+        output += genRepoBlock(repo['name'], repo['link'], repo['language'], repo['description'])
+      end
+
       output += "</div>"
-            
+      output
+    end
+    
+    def genRepoBlock(name, link, language, description)
+      output = "<div class='repo_block'>"
+      output +=   "<a class='repo_name' href='#{link}'>#{name}</a>"
+      output +=   "<div class='repo_language'>#{language}</div>"
+      output +=   "<div class='repo_descrition'>#{description}</div>"
+      output += "</div>"
       output
     end
     

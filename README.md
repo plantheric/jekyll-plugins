@@ -11,3 +11,13 @@ If you want to include private repositories you must create a config file `_bitb
 	
 	user: user_name
 	password: user_password
+
+If you want to include addition projects they can be specified in the file `_data\bitbucket.yml` with the following syntax
+
+    - name: 
+      link: 
+      language: 
+      description: 
+
+
+    
