@@ -1,8 +1,10 @@
-# jekyll-bitbucket-repositories
+# Jekyll Plugins
 
-A Jekyll plugin to generate a list of bitbucket repositories
+## bitbucket_repositories
 
-##Usage
+A Tag plugin to generate a list of bitbucket repositories
+
+### Usage
 	{% bitbucket_repositories user_name %}
 
 By default the plugin will only list public repositories. 
@@ -19,5 +21,35 @@ If you want to include addition projects they can be specified in the file `_dat
       language: 
       description: 
 
+## filters
 
-    
+Additional Liquid filters
+
+###regex
+	{{ original | regex: regexp, replacement }}
+
+## http_include
+
+A Tag plugin to include content downloaded from an http source
+
+###Usage
+	{% http_include url %}
+
+Urls that have been generated with the Dropbox 'Share Link' feature will be adjusted so that the raw document is included
+
+## make_pdf
+A Tag plugin to generate a PDF file from markdown content. make_pdf requires Gimli to generate the pdf.
+
+	gem install gimli
+
+###Usage
+
+	{% make_pdf content style_sheet pdf_file_path %}
+
+Parameters:
+
+	content       - either a string of markdown or a variable containing markdown
+	stylesheet    - either a string of css or a variable containing css
+	pdf_file_path - relative path for the generated PDF
+
+The plugin will add the generated PDF to Jekyll's list of static files so that it gets copied to the `_site` folder.
