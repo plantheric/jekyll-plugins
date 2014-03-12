@@ -4,7 +4,7 @@
 
 A Tag plugin to generate a list of bitbucket repositories
 
-### Usage
+#### Usage
 	{% bitbucket_repositories user_name %}
 
 By default the plugin will only list public repositories. 
@@ -32,17 +32,28 @@ Additional Liquid filters
 
 A Tag plugin to include content downloaded from an http source
 
-###Usage
+####Usage
 	{% http_include url %}
 
 Urls that have been generated with the Dropbox 'Share Link' feature will be adjusted so that the raw document is included
 
 ## make_pdf
-A Tag plugin to generate a PDF file from markdown content. make_pdf requires Gimli to generate the pdf.
+A Tag plugin to generate a PDF file from markdown content.
 
-	gem install gimli
+PDF creatation is performed by `wkhtmltopdf` using `xvfb-run` to run it in an X server environment.
+Running wkhtmltopdf without X server can result in horrible kerning issues in the generated PDF.
 
-###Usage
+The make_pdf.rb plugin requires the following
+
+	sudo apt-get install wkhtmltopdf
+	sudo apt-get install libicu48
+	sudo apt-get install xvfb
+
+You will also need to have installed the fonts used in document. Start with the Microsoft Core Fonts.
+
+	sudo apt-get install ttf-mscorefonts-installer
+
+####Usage
 
 	{% make_pdf content style_sheet pdf_file_path %}
 

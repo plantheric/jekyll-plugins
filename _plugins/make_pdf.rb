@@ -24,24 +24,27 @@ module Jekyll
     def render(context)
       site = context.registers[:site]
 
-      @content    = parse_param(@params[0], context)
-      @stylesheet = parse_param(@params[1], context)
-      @file_path  = parse_param(@params[2], context)
+      md_content = parse_param(@params[0], context)
+      stylesheet = parse_param(@params[1], context)
+      file_path  = parse_param(@params[2], context)
 
-      content_file = save_temp_file(@content, '.md')
-      style_sheet_file = save_temp_file(@stylesheet, '.css')
-      output_file = File.join(site.source, @file_path)
+      converter = site.getConverterImpl(Jekyll::Converters::Markdown)
+      html_content = converter.convert(md_content)
+            
+      content_file = save_temp_file(html_content, '.html')
+      style_sheet_file = save_temp_file(stylesheet, '.css')
+      output_file = File.join(site.source, file_path)
 
-      cmd = "gimli -f #{content_file} -s #{style_sheet_file} -o #{File.dirname(output_file)} -n #{File.basename(output_file, '.pdf')}"
+      cmd = "xvfb-run wkhtmltopdf --user-style-sheet #{style_sheet_file}  --encoding UTF8 #{content_file}  #{output_file}"
       system (cmd)
 
-      static_file = Jekyll::StaticFile.new(site, site.source, '', @file_path)
+      static_file = Jekyll::StaticFile.new(site, site.source, '', file_path)
       site.static_files << static_file
       ""
     end
 
     def save_temp_file(content, extension)
-      temp_file = Tempfile.new(['gimli_convert_', extension])
+      temp_file = Tempfile.new(['wkhtmltopdf_convert_', extension])
       temp_file << content
       temp_file.close
       temp_file.path
