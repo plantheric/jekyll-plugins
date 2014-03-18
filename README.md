@@ -1,25 +1,28 @@
 # Jekyll Plugins
 
-## bitbucket_repositories
+## project_repositories
 
-A Tag plugin to generate a list of bitbucket repositories
+A Tag plugin to generate a list of project repositories.
+
+The plugin will list public repositories in github and bitbucket and duplicate repository names will be remove
 
 #### Usage
-	{% bitbucket_repositories user_name %}
+	{% project_repositories user_name %}
 
-By default the plugin will only list public repositories. 
-If you want to include private repositories you must create a config file `_bitbucket.yml` at the root of your Jekyll site which should contain your bitbucket username and password.
+where the user_name is the user name for github and/or bitbucket
 
-	
-	user: user_name
-	password: user_password
 
-If you want to include addition projects they can be specified in the file `_data\bitbucket.yml` with the following syntax
+If you want to include addition projects they can be specified in the file `_data\project_repositories.yml` with the following syntax
 
-    - name: 
-      link: 
-      language: 
-      description: 
+	- name: 
+	  link: 
+	  language: 
+	  description: 
+
+You can also specify the order the projects are sort in for display. In the `_config.yml` file add
+
+	project_repositories:
+	  sort_order: ['Project 1', 'My project']
 
 ## filters
 
