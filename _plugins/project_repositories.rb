@@ -26,8 +26,8 @@ module Jekyll
     end
 
     def render(context)
-      site = context.registers[:site]
-      config = site.config
+      @site = context.registers[:site]
+      config = @site.config
 
       repos = []
       sort_order = (config['project_repositories'] && config['project_repositories']['sort_order']) || []
@@ -49,7 +49,7 @@ module Jekyll
       end
 
       # Get from _data/bitbucket.yml
-      site.data['project_repositories'].each do |repo|
+      @site.data['project_repositories'].each do |repo|
         repos << { name: repo['name'], link: repo['link'], language: repo['language'], description: repo['description'] }
       end
 
@@ -68,12 +68,18 @@ module Jekyll
     end
     
     def generate_repo_block(repo)
-      description = repo[:description].gsub(/\n/, "<br>\n")
-      output = "<div class='repo_block'>"
-      output +=   "<a class='repo_name' href='#{repo[:link]}'>#{repo[:name]}</a>"
-      output +=   "<div class='repo_language'>#{repo[:language]}</div>"
-      output +=   "<div class='repo_descrition'>#{description}</div>"
-      output += "</div>"
+      converter = @site.getConverterImpl(Jekyll::Converters::Markdown)
+      description = converter.convert(repo[:description])
+
+      output = <<-END
+                  <div class='repo_block'>
+                    <a class='repo_name' href='#{repo[:link]}'>#{repo[:name]}</a>
+                    <div class='repo_language'>#{repo[:language]}</div>
+                    <div class='repo_description'>
+                      #{description}
+                    </div>
+                  </div>
+                END
       output
     end
     
