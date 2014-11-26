@@ -23,6 +23,8 @@ module Jekyll
       params = Shellwords.shellwords markup
 
       @user = params[0]
+      @format = params[1] || "Full"
+      @maximum_listed = params[2] || 99
     end
 
     def render(context)
@@ -55,6 +57,8 @@ module Jekyll
 
       repos.uniq! { |repo| repo[:name] }
       repos.sort_by! { |repo| sort_order.index(repo[:name]) || 99 }
+      @maximum_listed = [@maximum_listed.to_i, repos.count].min
+      repos = repos[0, @maximum_listed]
 
       # Build html
       output = "<div class='repo_blocks'>"
@@ -70,16 +74,25 @@ module Jekyll
     def generate_repo_block(repo)
       converter = @site.getConverterImpl(Jekyll::Converters::Markdown)
       description = converter.convert(repo[:description])
+      repo_id = repo[:name].gsub(/[^a-zA-Z][^\w:.-]*/,'')
 
-      output = <<-END
-                  <div class='repo_block'>
-                    <a class='repo_name' href='#{repo[:link]}'>#{repo[:name]}</a>
-                    <div class='repo_language'>#{repo[:language]}</div>
-                    <div class='repo_description'>
-                      #{description}
+      if @format == "Full" 
+        output = <<-END
+                    <div class='repo_block' id='#{repo_id}'>
+                      <a class='repo_name' href='#{repo[:link]}'>#{repo[:name]}</a>
+                      <div class='repo_language'>#{repo[:language]}</div>
+                      <div class='repo_description'>
+                        #{description}
+                      </div>
                     </div>
-                  </div>
-                END
+                  END
+      else
+        output = <<-END
+                    <div class='repo_block'>
+                      <a class='repo_name' href='Projects/##{repo_id}'>#{repo[:name]}</a>
+                    </div>
+                  END
+        end
       output
     end
     
