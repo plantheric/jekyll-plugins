@@ -84,7 +84,7 @@ module Jekyll
     end
     
     def pretty_language_name(name)
-      lang = {'c#' => 'C#', 'objective-c' => 'Objective-C', 'ruby' => 'Ruby'}
+      lang = {'c#' => 'C#', 'objective-c' => 'Objective-C', 'ruby' => 'Ruby', 'c++' => 'C++'}
       name = lang[name] || name
     end
     
