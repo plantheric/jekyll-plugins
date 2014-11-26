@@ -33,6 +33,7 @@ module Jekyll
 
       repos = []
       sort_order = (config['project_repositories'] && config['project_repositories']['sort_order']) || []
+      exclude = (config['project_repositories'] && config['project_repositories']['exclude']) || []
 
       # Get from Bitbucket
       bitbucket_repos = get_repos("https://api.bitbucket.org/2.0/repositories/#{@user}")
@@ -50,11 +51,12 @@ module Jekyll
                     language: pretty_language_name(repo['language']), description: repo['description'] }
       end
 
-      # Get from _data/bitbucket.yml
+      # Get from _data/project_repositories.yml
       @site.data['project_repositories'].each do |repo|
         repos << { name: repo['name'], link: repo['link'], language: repo['language'], description: repo['description'] }
       end
 
+      repos.delete_if { |repo| exclude.include?(repo[:name]) }
       repos.uniq! { |repo| repo[:name] }
       repos.sort_by! { |repo| sort_order.index(repo[:name]) || 99 }
       @maximum_listed = [@maximum_listed.to_i, repos.count].min
