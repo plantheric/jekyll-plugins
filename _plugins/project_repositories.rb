@@ -35,95 +35,134 @@ module Jekyll
       sort_order = (config['project_repositories'] && config['project_repositories']['sort_order']) || []
       exclude = (config['project_repositories'] && config['project_repositories']['exclude']) || []
 
-      # Get from Bitbucket
-      bitbucket_repos = get_repos("https://api.bitbucket.org/2.0/repositories/#{@user}")
-      unless bitbucket_repos.empty?
-        bitbucket_repos['values'].each do |repo|
-          link = repo['links']['html']['href']
-          description = get_summary(link, repo['scm']) || repo['description']
-          repos << { name: repo['name'], link: link, language: pretty_language_name(repo['language']), description: description }
-        end
-      end
-
       # Get from Github
-      github_repos = get_repos("https://api.github.com/users/#{@user}/repos")
-      github_repos.each do |repo|
-        repos << { name: repo['name'], link: repo['html_url'], 
-                    language: pretty_language_name(repo['language']), description: repo['description'] }
-      end
+      github_repos = get_repos(GithubRepo.api_url(@user))
+      repos.concat github_repos.map { |r| GithubRepo.new(r) }
+
+      # Get from Bitbucket
+      bitbucket_repos = get_repos(BitbucketRepo.api_url(@user))
+      repos.concat bitbucket_repos['values'].map { |r| BitbucketRepo.new(r) } unless bitbucket_repos.empty?
 
       # Get from _data/project_repositories.yml
-      @site.data['project_repositories'].each do |repo|
-        repos << { name: repo['name'], link: repo['link'], language: repo['language'], description: repo['description'] }
-      end
+      repos.concat @site.data['project_repositories'].map { |r| Repo.new(r) }
 
-      repos.delete_if { |repo| exclude.include?(repo[:name]) }
-      repos.uniq! { |repo| repo[:name] }
-      repos.sort_by! { |repo| sort_order.index(repo[:name]) || 99 }
+      repos.delete_if { |repo| exclude.include?(repo.name) }
+      repos.uniq! { |repo| repo.name }
+      repos.sort_by! { |repo| sort_order.index(repo.name) || 99 }
       @maximum_listed = [@maximum_listed.to_i, repos.count].min
       repos = repos[0, @maximum_listed]
 
       # Build html
       output = "<div class='repo_blocks'>"
 
+      converter = @site.getConverterImpl(Jekyll::Converters::Markdown)
       repos.each do |repo|
-        output += generate_repo_block(repo)
+        output += generate_repo_block(repo, converter)
       end
 
       output += "</div>"
       output
     end
     
-    def generate_repo_block(repo)
-      converter = @site.getConverterImpl(Jekyll::Converters::Markdown)
-      description = converter.convert(repo[:description])
-      repo_id = repo[:name].gsub(/[^a-zA-Z][^\w:.-]*/,'')
-
+    def generate_repo_block(repo, converter)
       if @format == "Full" 
-        output = <<-END
-                    <div class='repo_block' id='#{repo_id}'>
-                      <h2 class='repo_name'><a href='#{repo[:link]}'>#{repo[:name]}</a></h2>
-                      <div class='repo_language'>#{repo[:language]}</div>
-                      <div class='repo_description'>
-                        #{description}
-                      </div>
-                    </div>
-                  END
+        repo.html_full_output(converter)
       else
-        output = <<-END
-                    <div class='repo_block'>
-                      <a class='repo_name' href='Projects/##{repo_id}'>#{repo[:name]}</a>
-                    </div>
-                  END
-        end
-      output
+        repo.html_list_output
+      end
     end
-    
-    def pretty_language_name(name)
-      lang = {'c#' => 'C#', 'objective-c' => 'Objective-C', 'ruby' => 'Ruby', 'c++' => 'C++'}
-      name = lang[name] || name
-    end
-    
+
     def get_repos(url)
-      response = get_url_response(url)
+      response = Net::HTTP.get_response(URI.parse(url))
       JSON.parse((response.code == '200') ? response.body : '[]')
     end
-    
-    def get_summary(url, scm)
-      branch = scm == 'hg' ? 'tip' : 'HEAD'
-      url += "/raw/#{branch}/Summary.md"
-      response = get_url_response(url)
-      (response.code == '200') ? response.body : nil
-    end
-    
-    def get_url_response(url)
-      uri = URI.parse(url)
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
-      request = Net::HTTP::Get.new(uri.request_uri)
-      response = http.request(request)
-    end
+
   end
 end
 
 Liquid::Template.register_tag('project_repositories', Jekyll::ProjectRepositoriesTag)
+
+class Repo
+  def initialize(repo)
+    @repo = repo
+  end
+  
+  def name
+    @repo['name']
+  end
+
+  def link
+    @repo['link']
+  end
+
+  def description
+    if (summary_url)
+      response = Net::HTTP.get_response(URI.parse(summary_url))
+      (response.code == '200') ? response.body : @repo['description']
+    else
+      @repo['description']
+    end
+  end
+
+  def summary_url
+  end
+
+  def repo_id
+    name.gsub(/[^a-zA-Z][^\w:.-]*/,'')
+  end
+  
+  def language
+    langs = {'c#' => 'C#', 'objective-c' => 'Objective-C', 'ruby' => 'Ruby', 'c++' => 'C++'}
+    langs[@repo['language']] || @repo['language']
+  end
+  
+  def html_full_output(converter)
+    <<-END
+        <div class='repo_block' id='#{repo_id}'>
+          <h2 class='repo_name'><a href='#{link}'>#{name}</a></h2>
+          <div class='repo_language'>#{language}</div>
+          <div class='repo_description'>
+            #{converter.convert(description)}
+          </div>
+        </div>
+      END
+  end
+
+  def html_list_output
+    <<-END
+        <div class='repo_block'>
+          <a class='repo_name' href='Projects/##{repo_id}'>#{name}</a>
+        </div>
+      END
+  end
+end
+
+class BitbucketRepo < Repo
+  def link
+    @repo['links']['html']['href']
+  end
+  
+  def summary_url
+    link + "/raw/#{@repo['scm'] == 'hg' ? 'tip' : 'HEAD'}/Summary.md"
+  end
+  
+  def self.api_url(user)
+    "https://api.bitbucket.org/2.0/repositories/#{user}"
+  end
+end
+
+class GithubRepo < Repo
+  def link
+    @repo['html_url']
+  end
+
+  def summary_url
+    url = link + "/raw/master/Summary.md"
+    response = Net::HTTP.get_response(URI.parse(url))         # Github redirect content
+    (response.code == '200') ? url : response.header['location']
+  end
+
+  def self.api_url(user)
+    "https://api.github.com/users/#{user}/repos"
+  end
+end
