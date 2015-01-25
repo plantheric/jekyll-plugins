@@ -39,8 +39,9 @@ module Jekyll
       bitbucket_repos = get_repos("https://api.bitbucket.org/2.0/repositories/#{@user}")
       unless bitbucket_repos.empty?
         bitbucket_repos['values'].each do |repo|
-          repos << { name: repo['name'], link: repo['links']['html']['href'], 
-                      language: pretty_language_name(repo['language']), description: repo['description'] }
+          link = repo['links']['html']['href']
+          description = get_summary(link, repo['scm']) || repo['description']
+          repos << { name: repo['name'], link: link, language: pretty_language_name(repo['language']), description: description }
         end
       end
 
@@ -81,7 +82,7 @@ module Jekyll
       if @format == "Full" 
         output = <<-END
                     <div class='repo_block' id='#{repo_id}'>
-                      <a class='repo_name' href='#{repo[:link]}'>#{repo[:name]}</a>
+                      <h2 class='repo_name'><a href='#{repo[:link]}'>#{repo[:name]}</a></h2>
                       <div class='repo_language'>#{repo[:language]}</div>
                       <div class='repo_description'>
                         #{description}
@@ -104,14 +105,24 @@ module Jekyll
     end
     
     def get_repos(url)
+      response = get_url_response(url)
+      JSON.parse((response.code == '200') ? response.body : '[]')
+    end
+    
+    def get_summary(url, scm)
+      branch = scm == 'hg' ? 'tip' : 'HEAD'
+      url += "/raw/#{branch}/Summary.md"
+      response = get_url_response(url)
+      (response.code == '200') ? response.body : nil
+    end
+    
+    def get_url_response(url)
       uri = URI.parse(url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
       request = Net::HTTP::Get.new(uri.request_uri)
       response = http.request(request)
-      
-      JSON.parse((response.code == '200') ? response.body : '[]')
-    end 
+    end
   end
 end
 
