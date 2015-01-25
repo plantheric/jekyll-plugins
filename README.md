@@ -2,22 +2,28 @@
 
 ## project_repositories
 
-A Tag plugin to generate a list of project repositories.
+A Tag plugin to generate content containing a list of projects.
 
-The plugin will list public repositories in github and bitbucket and duplicate repository names will be remove
+The plugin will generate content listing public repositories on github and bitbucket.
 
 #### Usage
 	{% project_repositories user_name %}
 
-where the user_name is the user name for github and/or bitbucket
+where the `user_name` is the user name for github and/or bitbucket.
 
+The plugin will take `name`, `link`, `language` and `description` parameters from the API response. 
+The plugin also will attempt to download a `Summary.md` file from the  project root. 
+If this file exists it will be used for the project description.
 
-If you want to include addition projects they can be specified in the file `_data\project_repositories.yml` with the following syntax
+The plugin can also list projects that are not in public github or bitbucket repositories. 
+Addition projects can be listed in the file `_data\project_repositories.yml` with the following syntax.
 
 	- name: 
 	  link: 
 	  language: 
 	  description: 
+
+The `description` field will be processed as markdown.
 
 You can also specify the order the projects are sort in for display. In the `_config.yml` file add
 
