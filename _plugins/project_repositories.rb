@@ -13,6 +13,7 @@ require 'json'
 require 'net/http'
 require 'uri'
 require 'shellwords'
+require_relative 'project_repositories/repo'
 
 module Jekyll
 
@@ -52,11 +53,13 @@ module Jekyll
       @maximum_listed = [@maximum_listed.to_i, repos.count].min
       repos = repos[0, @maximum_listed]
 
+      converter = @site.getConverterImpl(Jekyll::Converters::Markdown)
+
       # Build html
       output = "<div class='repo_blocks'>"
 
-      converter = @site.getConverterImpl(Jekyll::Converters::Markdown)
       repos.each do |repo|
+        generate_project_page(repo)
         output += generate_repo_block(repo, converter)
       end
 
@@ -65,10 +68,24 @@ module Jekyll
     end
     
     def generate_repo_block(repo, converter)
-      if @format == "Full" 
-        repo.html_full_output(converter)
-      else
+      if @format == "Summary"
         repo.html_list_output
+      else
+        repo.html_full_output(converter)
+      end
+    end
+
+    def generate_project_page(repo)
+      if @format == "ProjectPages"
+        readme = repo.readme
+        if (readme)
+          path = "/#{repo.repo_id}.md"
+          save_readme_file(readme, path)
+          page = Page.new(@site, "_cache/", "", "projects#{path}")
+          page.render(@site.layouts, @site.site_payload)
+          @site.pages << page
+          repo.project_link = page.url
+        end
       end
     end
 
@@ -77,92 +94,16 @@ module Jekyll
       JSON.parse((response.code == '200') ? response.body : '[]')
     end
 
+    def save_readme_file(content, path)
+      front_matter = (@site.config['project_repositories'] && @site.config['project_repositories']['front_matter']) || {}
+      file = File.new("#{@site.source}/_cache/projects#{path}", "w")
+      file << "---\n"
+      front_matter.each {|key,value| file << "#{key}: #{value}\n"}
+      file << "---\n\n{% raw  %}\n#{content}\n{% endraw %}\n"
+      file.close
+    end
   end
 end
 
 Liquid::Template.register_tag('project_repositories', Jekyll::ProjectRepositoriesTag)
 
-class Repo
-  def initialize(repo)
-    @repo = repo
-  end
-  
-  def name
-    @repo['name']
-  end
-
-  def link
-    @repo['link']
-  end
-
-  def description
-    if (summary_url)
-      response = Net::HTTP.get_response(URI.parse(summary_url))
-      (response.code == '200') ? response.body : @repo['description']
-    else
-      @repo['description']
-    end
-  end
-
-  def summary_url
-  end
-
-  def repo_id
-    name.gsub(/[^a-zA-Z][^\w:.-]*/,'')
-  end
-  
-  def language
-    langs = {'c#' => 'C#', 'objective-c' => 'Objective-C', 'ruby' => 'Ruby', 'c++' => 'C++'}
-    langs[@repo['language']] || @repo['language']
-  end
-  
-  def html_full_output(converter)
-    <<-END
-        <div class='repo_block' id='#{repo_id}'>
-          <h2 class='repo_name'><a href='#{link}'>#{name}</a></h2>
-          <div class='repo_language'>#{language}</div>
-          <div class='repo_description'>
-            #{converter.convert(description)}
-          </div>
-        </div>
-      END
-  end
-
-  def html_list_output
-    <<-END
-        <div class='repo_block'>
-          <a class='repo_name' href='Projects/##{repo_id}'>#{name}</a>
-        </div>
-      END
-  end
-end
-
-class BitbucketRepo < Repo
-  def link
-    @repo['links']['html']['href']
-  end
-  
-  def summary_url
-    link + "/raw/#{@repo['scm'] == 'hg' ? 'tip' : 'HEAD'}/Summary.md"
-  end
-  
-  def self.api_url(user)
-    "https://api.bitbucket.org/2.0/repositories/#{user}"
-  end
-end
-
-class GithubRepo < Repo
-  def link
-    @repo['html_url']
-  end
-
-  def summary_url
-    url = link + "/raw/master/Summary.md"
-    response = Net::HTTP.get_response(URI.parse(url))         # Github redirect content
-    (response.code == '200') ? url : response.header['location']
-  end
-
-  def self.api_url(user)
-    "https://api.github.com/users/#{user}/repos"
-  end
-end
