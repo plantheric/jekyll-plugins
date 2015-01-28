@@ -51,7 +51,7 @@ class Repo
           <h2 class='repo_name'><a href='#{project_link}'>#{name}</a></h2>
           <div class='repo_language'>#{language}</div>
           <div class='repo_description'>
-            #{converter.convert(description)}
+            #{converter.convert(description.gsub(/#{repo_link}/,"#{project_link}"))}
           </div>
         </div>
       END
@@ -60,7 +60,7 @@ class Repo
   def html_list_output
     <<-END
         <div class='repo_block'>
-          <a class='repo_name' href='Projects/##{repo_id}'>#{name}</a>
+          <a class='repo_name' href='/Projects/##{repo_id}'>#{name}</a>
         </div>
       END
   end
@@ -82,12 +82,15 @@ class BitbucketRepo < Repo
   end
   
   def repo_file_url(file_name)
-    puts "repo_file_url(#{file_name})"
     repo_link + "/raw/#{@repo['scm'] == 'hg' ? 'tip' : 'master'}/#{file_name}"
   end
   
   def self.api_url(user)
     "https://api.bitbucket.org/2.0/repositories/#{user}"
+  end
+
+  def host_name
+    "Bitbucket"
   end
 end
 
@@ -97,7 +100,6 @@ class GithubRepo < Repo
   end
 
   def repo_file_url(file_name)
-    puts "repo_file_url(#{file_name})"
     url = repo_link + "/raw/master/#{file_name}"
     response = Net::HTTP.get_response(URI.parse(url))         # Github redirect content
     (response.code == '200') ? url : response.header['location']
@@ -105,5 +107,9 @@ class GithubRepo < Repo
 
   def self.api_url(user)
     "https://api.github.com/users/#{user}/repos"
+  end
+  
+  def host_name
+    "GitHub"
   end
 end

@@ -80,7 +80,7 @@ module Jekyll
         readme = repo.readme
         if (readme)
           path = "/#{repo.repo_id}.md"
-          save_readme_file(readme, path)
+          save_readme_file(readme, "[See this project on #{repo.host_name}](#{repo.repo_link}){: .repo_link}", path)
           page = Page.new(@site, "_cache/", "", "projects#{path}")
           page.render(@site.layouts, @site.site_payload)
           @site.pages << page
@@ -94,7 +94,8 @@ module Jekyll
       JSON.parse((response.code == '200') ? response.body : '[]')
     end
 
-    def save_readme_file(content, path)
+    def save_readme_file(content, subhead, path)
+      content.sub!(/^(#[\w ]+)$/, "\\1  \n#{subhead}")
       front_matter = (@site.config['project_repositories'] && @site.config['project_repositories']['front_matter']) || {}
       file = File.new("#{@site.source}/_cache/projects#{path}", "w")
       file << "---\n"
